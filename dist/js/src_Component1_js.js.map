@@ -1,1 +1,0 @@
-{"version":3,"sources":["webpack://diff_serving/./src/Component1.js"],"names":["render","console","log"],"mappings":";;;;;;;;;;;;;;;;;AAAO,IAAMA,MAAM,GAAG,MAAMC,OAAO,CAACC,GAAR,CAAY,aAAZ,CAArB,C","file":"js/src_Component1_js.js","sourcesContent":["export const render = () => console.log(\"Component 1\")"],"sourceRoot":""}
