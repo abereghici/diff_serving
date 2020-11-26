@@ -1,0 +1,1 @@
+export const render = () => console.log("Component 1")
