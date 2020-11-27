@@ -61,7 +61,7 @@ const configFactory = bundleType => {
 			}),
 			new HtmlWebpackPlugin({
 				filename: 'index.html',
-				inject: true,
+				inject: 'body',
 				scriptLoading: "blocking"
 			}),
 			new ModernBuildPlugin({
@@ -72,6 +72,6 @@ const configFactory = bundleType => {
 }
 
 module.exports = [
-	configFactory('modern'),
-	configFactory('legacy')
+	configFactory('legacy'),
+	configFactory('modern')
 ];

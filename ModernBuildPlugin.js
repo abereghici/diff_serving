@@ -5,27 +5,27 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 const pluginName = 'modern-build-plugin';
 const safariFixScript = `(function(){var d=document;var c=d.createElement('script');if(!('noModule' in c)&&'onbeforeload' in c){var s=!1;d.addEventListener('beforeload',function(e){if(e.target===c){s=!0}else if(!e.target.hasAttribute('nomodule')||!s){return}e.preventDefault()},!0);c.type='module';c.src='.';d.head.appendChild(c);c.remove()}}())`;
 
-class Assets {
+class AssetsManager {
 	constructor(path) {
 		this.path = path;
 	}
 
-	read() {
+	get() {
 		return JSON.parse(
 			fs.readFileSync(this.path, 'utf-8')
 		);
 	}
 
-	write(data = {}) {
+	set(data = {}) {
 		fs.mkdirpSync(path.dirname(this.path));
 		fs.writeFileSync(this.path, JSON.stringify(data));
 	}
 
-	delete() {
+	remove() {
 		fs.removeSync(this.path);
 	}
 
-	exists() {
+	hasAssets() {
 		return !!fs.existsSync(this.path);
 	}
 }
@@ -49,11 +49,34 @@ class ModernBuildPlugin {
 		});
 	}
 
+	alterAssetTagGroups = ({plugin, bodyTags: body, headTags: head, ...rest}, cb) => {
+		const assetsManager = this.createAssetManager(plugin);
+
+		const currentAssets = plugin.options.inject === 'head' ? head : body;
+
+		if (assetsManager.hasAssets()) {
+
+			this.setAttributesToScripts(currentAssets);
+			this.injectAssets(assetsManager.get(), currentAssets);
+
+			assetsManager.remove();
+		} else {
+
+			const scripts = currentAssets.filter(a => a.tagName === 'script' && a.attributes);
+			this.setAttributesToScripts(scripts);
+
+			assetsManager.set(scripts);
+		}
+
+		cb();
+	}
+
+
 	beforeEmitHtml = (data) => {
 		data.html = data.html.replace(/\snomodule="">/g, ' nomodule>');
 	}
 
-	createAssets = plugin => {
+	createAssetManager = plugin => {
 		const targetDir = this.compiler.options.output.path;
 		const htmlName = path.basename(plugin.options.filename);
 		const htmlPath = path.dirname(plugin.options.filename);
@@ -64,13 +87,12 @@ class ModernBuildPlugin {
 			`assets.${htmlName}.json`
 		);
 
-		return new Assets(assetsPath);
+		return new AssetsManager(assetsPath);
 	}
 
-	setAttributesToScripts = body => body.forEach(({attributes, ...rest}) => ({
-		...rest,
-		attributes: {
-			...attributes,
+	setAttributesToScripts = scripts => scripts.forEach(script => {
+		script.attributes = {
+			...script.attributes,
 			...(this.options.mode === 'legacy' ?
 				// Empty nomodule in legacy build
 				{
@@ -82,28 +104,9 @@ class ModernBuildPlugin {
 					crossOrigin: 'anonymous'
 				})
 		}
-	}));
+	});
 
-
-	alterAssetTagGroups = ({plugin, bodyTags: body, headTags: head, ...rest}, cb) => {
-		const assets = this.createAssets(plugin);
-
-		if (assets.exists()) {
-			this.setAttributesToScripts(body);
-			this.injectAssets(assets.read(), body);
-			assets.delete();
-		} else {
-			const newBody = body.filter(tag => tag.tagName === 'script' && tag.attributes)
-			this.setAttributesToScripts(
-				newBody
-			);
-			assets.write(newBody);
-		}
-
-		cb();
-	}
-
-	injectAssets = (assets, body) => {
+	injectAssets = (assets, target) => {
 		const safariFixScriptTag = {
 			tagName: 'script',
 			closeTag: true,
@@ -111,10 +114,11 @@ class ModernBuildPlugin {
 		}
 		// Make our array look like [modern, script, legacy]
 		if (this.options.mode === 'legacy') {
-			body.unshift(...assets, safariFixScriptTag);
+			target.unshift(...assets, safariFixScriptTag);
 		} else {
-			body.push(safariFixScriptTag, ...assets);
+			target.push(safariFixScriptTag, ...assets);
 		}
+		target.sort(a => a.tagName === 'script' ? 1 : -1);
 	}
 }
 
