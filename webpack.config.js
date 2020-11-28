@@ -11,20 +11,22 @@
 // Built-ins
 const path = require("path");
 
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const ModernBuildPlugin = require("./ModernBuildPlugin");
+const BundleAnalyzerPlugin = require("webpack-bundle-analyzer")
+	.BundleAnalyzerPlugin;
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const ModernBuildPlugin = require("webpack-modern-build-plugin");
 
-const mode = process.env.NODE_ENV === "production" ? "production" : "development";
+const mode =
+	process.env.NODE_ENV === "production" ? "production" : "development";
 
 const src = (...args) => path.join(__dirname, "src", ...args);
 const dist = (...args) => path.join(__dirname, "dist", ...args);
 
-const configFactory = bundleType => {
-
-	const fileName = mode === "development" ?
-		`js/${bundleType === 'legacy' ? 'es5.' : ''}[name].js` :
-		`js/${bundleType === 'legacy' ? 'es5.' : ''}[name].[chunkhash:8].js`
+const configFactory = (bundleType) => {
+	const fileName =
+		mode === "development"
+			? `js/${bundleType === "legacy" ? "es5." : ""}[name].js`
+			: `js/${bundleType === "legacy" ? "es5." : ""}[name].[chunkhash:8].js`;
 
 	return {
 		mode,
@@ -35,7 +37,7 @@ const configFactory = bundleType => {
 			filename: fileName,
 			chunkFilename: fileName,
 			path: dist(),
-			publicPath: "/"
+			publicPath: "/",
 		},
 		module: {
 			rules: [
@@ -46,32 +48,29 @@ const configFactory = bundleType => {
 						{
 							loader: "babel-loader",
 							options: {
-								envName: bundleType
-							}
-						}
-					]
-				}
-			]
+								envName: bundleType,
+							},
+						},
+					],
+				},
+			],
 		},
 		plugins: [
 			new BundleAnalyzerPlugin({
-				analyzerMode: 'static',
+				analyzerMode: "static",
 				reportFilename: `${bundleType}.report.html`,
 				openAnalyzer: false,
 			}),
 			new HtmlWebpackPlugin({
-				filename: 'index.html',
-				inject: 'body',
-				scriptLoading: "blocking"
+				filename: "index.html",
+				inject: "body",
+				scriptLoading: "blocking",
 			}),
 			new ModernBuildPlugin({
-				mode: bundleType
+				mode: bundleType,
 			}),
-		]
-	}
-}
+		],
+	};
+};
 
-module.exports = [
-	configFactory('legacy'),
-	configFactory('modern')
-];
+module.exports = [configFactory("legacy"), configFactory("modern")];
